@@ -1,5 +1,8 @@
 from kafka import KafkaConsumer, TopicPartition
 from json import loads
+from flask import Flask
+from model import db, Transaction
+import numpy as np
 
 class XactionConsumer:
     def __init__(self):
@@ -13,25 +16,37 @@ class XactionConsumer:
         # custBalances is the one where the current blance of each customer
         # account is kept.
         self.custBalances = {}
+        self.deposits = []
+        self.withdraw = []
+
+        #update summary to see if its deposit or withdaw then append to either list
+        #then make a print summary that tells you the mean
         # THE PROBLEM is every time we re-run the Consumer, ALL our customer
         # data gets lost!
         # add a way to connect to your database here.
+        self.app = Flask(__name__)
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+        self.app.config['SECRET_KEY'] = 'isiah'
+        db.init_app(self.app)
+        with self.app.app_context():
+            db.create_all()
 
         #Go back to the readme.
 
     def handleMessages(self):
-        for message in self.consumer:
-            message = message.value
-            print('{} received'.format(message))
-            self.ledger[message['custid']] = message
-            # add message to the transaction table in your SQL usinf SQLalchemy
-            if message['custid'] not in self.custBalances:
-                self.custBalances[message['custid']] = 0
-            if message['type'] == 'dep':
-                self.custBalances[message['custid']] += message['amt']
-            else:
-                self.custBalances[message['custid']] -= message['amt']
-            print(self.custBalances)
+        with self.app.app_context():
+            for message in self.consumer:
+                message = message.value
+                print('{} received'.format(message))
+                transaction = Transaction(
+                    custid = message['custid'],
+                    type = message['type'],
+                    date = message['date'],
+                    amt = message['amt']
+                )
+                db.session.add(transaction)
+                db.session.commit()
+                print("Transaction added to database.")
 
 if __name__ == "__main__":
     c = XactionConsumer()
