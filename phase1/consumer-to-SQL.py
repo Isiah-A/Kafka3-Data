@@ -31,7 +31,47 @@ class XactionConsumer:
         with self.app.app_context():
             db.create_all()
 
-        #Go back to the readme.
+    def print_summary(self):
+        if self.deposits:
+            mean_deposit = np.mean(self.deposits)
+            std_deposit = np.std(self.deposits)
+        else:
+            mean_deposit = 0
+            std_deposit = 0
+
+        if self.withdraw:
+            mean_withdraw = np.mean(self.deposits)
+            std_deposit = np.std(self.deposits)
+        else:
+            mean_deposit = 0
+            std_deposit = 0
+
+        if self.withdraw:
+            mean_withdraw = np.mean(self.withdraw)
+            std_withdraw = np.std(self.withdraw)
+
+        else:
+            mean_withdraw = 0
+            std_withdraw = 0
+
+        print("\n ----- Numerical Summary -----")
+        print("Mean Deposit: ", mean_deposit)
+        print("Standard Deviation Deposit: ", std_deposit)
+        print("Mean Withdrawal: ", mean_withdraw)
+        print("Standard Deviation Withdrawal: ", std_withdraw)
+        print("-----------------------------")
+
+
+    def stat_summary(self, transaction):
+        if transaction['type'] == 'dep':
+            self.deposits.append(transaction['amt'])
+        elif transaction['type'] == 'wih':
+            self.withdraw.append(transaction['amt'])
+        self.print_summary()
+
+
+
+
 
     def handleMessages(self):
         with self.app.app_context():
