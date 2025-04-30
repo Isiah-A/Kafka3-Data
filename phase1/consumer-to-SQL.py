@@ -8,7 +8,7 @@ class XactionConsumer:
     def __init__(self):
         self.consumer = KafkaConsumer('bank-customer-events',
             bootstrap_servers=['localhost:9092'],
-            # auto_offset_reset='earliest',
+            auto_offset_reset='earliest',
             value_deserializer=lambda m: loads(m.decode('ascii')))
         ## These are two python dictionarys
         # Ledger is the one where all the transaction get posted
@@ -17,9 +17,9 @@ class XactionConsumer:
         # account is kept.
         self.custBalances = {}
         self.deposits = []
-        self.withdraw = []
+        self.withdrawl = []
 
-        #update summary to see if its deposit or withdaw then append to either list
+        #update summary to see if its deposit or withdawl then append to either list
         #then make a print summary that tells you the mean
         # THE PROBLEM is every time we re-run the Consumer, ALL our customer
         # data gets lost!
@@ -31,43 +31,37 @@ class XactionConsumer:
         with self.app.app_context():
             db.create_all()
 
+    def stat_summary(self, transaction):
+        if transaction['type'] == 'dep':
+            self.deposits.append(transaction['amt'])
+        elif transaction['type'] == 'wth':
+            self.withdrawl.append(transaction['amt'])
+        self.print_summary()
+
     def print_summary(self):
         if self.deposits:
-            mean_deposit = np.mean(self.deposits)
-            std_deposit = np.std(self.deposits)
+           mean_deposit = np.mean(self.deposits)
+           std_deposit = np.std(self.deposits)
         else:
             mean_deposit = 0
             std_deposit = 0
 
-        if self.withdraw:
-            mean_withdraw = np.mean(self.deposits)
-            std_deposit = np.std(self.deposits)
+        if self.withdrawl:
+            mean_withdrawl = np.mean(self.withdrawl)
+            std_withdrawl = np.std(self.withdrawl)
         else:
-            mean_deposit = 0
-            std_deposit = 0
-
-        if self.withdraw:
-            mean_withdraw = np.mean(self.withdraw)
-            std_withdraw = np.std(self.withdraw)
-
-        else:
-            mean_withdraw = 0
-            std_withdraw = 0
+            mean_withdrawl = 0
+            std_withdrawl = 0
 
         print("\n ----- Numerical Summary -----")
         print("Mean Deposit: ", mean_deposit)
         print("Standard Deviation Deposit: ", std_deposit)
-        print("Mean Withdrawal: ", mean_withdraw)
-        print("Standard Deviation Withdrawal: ", std_withdraw)
+        print("Mean Withdrawal: ", mean_withdrawl)
+        print("Standard Deviation Withdrawal: ", std_withdrawl)
         print("-----------------------------")
 
 
-    def stat_summary(self, transaction):
-        if transaction['type'] == 'dep':
-            self.deposits.append(transaction['amt'])
-        elif transaction['type'] == 'wih':
-            self.withdraw.append(transaction['amt'])
-        self.print_summary()
+
 
 
 
@@ -86,6 +80,7 @@ class XactionConsumer:
                 )
                 db.session.add(transaction)
                 db.session.commit()
+                self.stat_summary(message)
                 print("Transaction added to database.")
 
 if __name__ == "__main__":
